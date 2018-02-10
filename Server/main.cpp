@@ -8,42 +8,6 @@ using namespace std;
 //-----------------------------------------------------------
 	fd_set master;
 //	FD_ZERO(master); 
-//	FD_SET( listenSOCK , &master );
-//	while (true) {
-//		fd_set copy = master ;
-//		int socketCount = select( 0 , &copy , NULL , NULL , NULL );
-//		for (int i=0;i<socketCount;i++) {
-//			SOCKET sock = copy.fd_array[i];
-//			if (sock == listenSOCK ) {
-//				// Accept connection
-//				SOCKET client = accept(listenSOCK , NULL, NULL );
-//				// Add new connection connected
-//				FD_SET(client , &master);
-//				// Send a welcome message
-//				char welmes[]="Welcome to chat server!!!";
-//				send(client,welmes,strlen(welmes),0);
-//			}
-//			else {
-//				char recvbuf[4096];
-//				ZeroMemory(recvbuf,4096);
-//				result = recv( sock , recvbuf , 4096 , 0 );
-//				if (result <= 0 ) {
-//					cout<<"recv error: "<<WSAGetLastError()<<endl;
-//					closesocket(sock);
-//					FD_CLR(sock , &master);
-//				}
-//				else {
-//					// Send message to other clients
-//					for (int i=0;i<master.fd_count;i++) {
-//						SOCKET outSock = master.fd_array[i];
-//						if (outSock != listenSOCK && outSock != sock ) {
-//							send(outSock,recvbuf,result,0);
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
 
 
 //------------------------------------------------------------------
