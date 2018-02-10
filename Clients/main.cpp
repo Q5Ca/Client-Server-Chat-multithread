@@ -5,24 +5,29 @@
 
 using namespace std;
 
+string name;
+
+//---------------------------------------
 int sd(SOCKET s )
 {
 	string buf;
 	do {
-		cout<<"Client: ";getline(cin,buf);
+		cout<<name<<" : ";getline(cin,buf);
 		if ( buf.length() >0) {
+			buf=name+" : "+buf;
 			const char *sendbuf = buf.c_str();
 			if ( send( s , sendbuf , strlen(sendbuf) , 0 )  == SOCKET_ERROR ) {
 				cout<<"send failed: "<<WSAGetLastError()<<endl;
 				closesocket(s);
 				WSACleanup();
+				getchar();
 				return 1;
 			}
 		}
 	} while ( buf.length() >0 );
 	return 0;
 }
-
+//--------------------------------------------------
 int rv (SOCKET s) 
 {
 	while (true ) {
@@ -31,8 +36,8 @@ int rv (SOCKET s)
 		int result = recv ( s , recvbuf , 4096, 0 );
 		if ( result > 0) {
 			cout<<'\r';
-			cout<< "Server: "<<recvbuf<<endl;
-			cout<<"Client: ";
+			cout<< recvbuf<<endl;
+			cout<<name<<" : ";
 		}
 		else if ( result == 0 ) {
 			cout<<"Connection closed"<<endl;
@@ -42,11 +47,17 @@ int rv (SOCKET s)
 			cout<<"recv failed: "<<WSAGetLastError()<<endl;
 			closesocket(s);
 			WSACleanup();
+			getchar();
 			return 2;
 		}
 	}
 }
-	
+//---------------------------------------------------------
+
+
+
+
+
 int main() 
 {
 	int result;
@@ -57,6 +68,7 @@ int main()
 	result = WSAStartup(MAKEWORD(2,2), &wsaData);
 	if (result != 0) {
 		cout<<"Initialize Winsock Fail: "<<result<<endl;
+		getchar();
 		return 1;
 	}
 	else cout<<"Initialize Winsock OK"<<endl;
@@ -74,6 +86,7 @@ int main()
     result = getaddrinfo( host.c_str() , port.c_str() , &hints, &res);
 	if ( result != 0) {
 		cout<<"getaddrinfo failed: "<<result<<endl;
+		getchar();
 		return 1;
 	}
 	else cout<<"getaddrinfo OK"<<endl;
@@ -84,6 +97,7 @@ int main()
 	if ( connectSOCK == INVALID_SOCKET ) {
 		cout<<"Create connect sock failed: "<<WSAGetLastError()<<endl;
 		WSACleanup();
+		getchar();
 		return 1;
 	}
 	else cout<<"Create connect sock OK"<<endl;
@@ -92,6 +106,7 @@ int main()
 	result = connect( connectSOCK , res->ai_addr , (int) res->ai_addrlen);
 	if ( result != 0) {
 		cout<<"connect failed: "<<WSAGetLastError()<<endl;
+		getchar();
 		closesocket(connectSOCK );
 		WSACleanup();
 		return 1;
@@ -104,6 +119,12 @@ int main()
 
     
 	cout<<endl<<endl;
+// connect complete---------------------------------------------------
+
+// ask name?
+	
+	cout<<"What name do you want? ";getline(cin,name);
+	send( connectSOCK , name.c_str() , strlen(name.c_str()) , 0 );
 	
 
 	// send thread
@@ -118,7 +139,10 @@ int main()
     // cleanup
     closesocket(connectSOCK);
     WSACleanup();
-
+	
+//	cout<<"Test PASSED"<<endl;
+//	getchar();
+	
     return 0;
 }
 

@@ -1,5 +1,3 @@
-#undef UNICODE
-
 #include <ws2tcpip.h>
 #include <iostream>
 #include <string>
@@ -7,48 +5,156 @@
 using namespace std;
 
 #define DEFAULT_PORT "123"
+//-----------------------------------------------------------
+	fd_set master;
+//	FD_ZERO(master); 
+//	FD_SET( listenSOCK , &master );
+//	while (true) {
+//		fd_set copy = master ;
+//		int socketCount = select( 0 , &copy , NULL , NULL , NULL );
+//		for (int i=0;i<socketCount;i++) {
+//			SOCKET sock = copy.fd_array[i];
+//			if (sock == listenSOCK ) {
+//				// Accept connection
+//				SOCKET client = accept(listenSOCK , NULL, NULL );
+//				// Add new connection connected
+//				FD_SET(client , &master);
+//				// Send a welcome message
+//				char welmes[]="Welcome to chat server!!!";
+//				send(client,welmes,strlen(welmes),0);
+//			}
+//			else {
+//				char recvbuf[4096];
+//				ZeroMemory(recvbuf,4096);
+//				result = recv( sock , recvbuf , 4096 , 0 );
+//				if (result <= 0 ) {
+//					cout<<"recv error: "<<WSAGetLastError()<<endl;
+//					closesocket(sock);
+//					FD_CLR(sock , &master);
+//				}
+//				else {
+//					// Send message to other clients
+//					for (int i=0;i<master.fd_count;i++) {
+//						SOCKET outSock = master.fd_array[i];
+//						if (outSock != listenSOCK && outSock != sock ) {
+//							send(outSock,recvbuf,result,0);
+//						}
+//					}
+//				}
+//			}
+//		}
+//	}
 
-int rv (SOCKET s) 
+
+//------------------------------------------------------------------
+// receive message and send to other client socks
+int rvsd (SOCKET s) 
 {
+	char client_name[50];
+	recv(s,client_name,50,0);
+	
+	char welmes[80]="Server: Welcome to chat server ";
+	strcat(welmes,client_name);
+	// annouce others ( send to all clients)
+	for(int i=0;i<master.fd_count;i++) {
+		send(master.fd_array[i],welmes,strlen(welmes),0);
+	}
+	cout<<'\r';
+	cout<<client_name<<" connected"<<endl;
+	cout<<"Server: ";
 	while (true ) {
 		char recvbuf[4096];
 		ZeroMemory(recvbuf,4096);
 		int result = recv ( s , recvbuf , 4096, 0 );
 		if ( result > 0) {
 			cout<<'\r';
-			cout<< "Client: "<<recvbuf<<endl;
+			cout<< recvbuf<<endl;
 			cout<<"Server: ";
+			for(int i=0;i<master.fd_count;i++) {
+				if(master.fd_array[i] != s) {
+					send(master.fd_array[i],recvbuf,strlen(recvbuf),0);
+				}
+			}
 		}
 		else if ( result == 0 ) {
-			cout<<"Connection closed"<<endl;
+			FD_CLR(s,&master);
+			cout<<'\r';
+			cout<<"A client disconnected"<<endl;
+			cout<<"Server: ";
+			// annouce others
+			for(int i=0;i<master.fd_count;i++) {
+				char dis_annouce[]="Server : A client disconnected";
+				send(master.fd_array[i],dis_annouce,strlen(dis_annouce),0);
+			}
 			return 1;
 		}
 		else {
-			cout<<"recv failed: "<<WSAGetLastError()<<endl;
-			closesocket(s);
-			WSACleanup();
+			FD_CLR(s,&master);
+			cout<<'\r';
+			cout<<"a client recv failed: "<<WSAGetLastError()<<endl;
+			cout<<"Server: ";
+			
+			// annouce others
+			for(int i=0;i<master.fd_count;i++) {
+				char dis_annouce[]="Server : A client disconnected";
+				send(master.fd_array[i],dis_annouce,strlen(dis_annouce),0);
+			}
 			return 2;
 		}
 	}
 }
 
-int sd(SOCKET s )
+//--------------------------------------------------------------
+int ac(SOCKET listenSOCK)
+{
+   // Accept a client socket
+   	while(true) {
+		SOCKET ClientSocket = accept(listenSOCK, NULL, NULL);
+    	if (ClientSocket == INVALID_SOCKET) {
+    		cout<<'\r';
+        	cout<<"accept error: "<<WSAGetLastError()<<endl;
+        	cout<<"Server: ";
+			closesocket(ClientSocket);
+    	}
+		else {
+			thread handle(rvsd,ClientSocket);
+			handle.detach();
+			FD_SET(ClientSocket,&master);
+			
+		}
+	}
+}
+//-------------------------------------------------------
+
+// send anouce
+int sd( )
 {
 	string buf;
 	do {
 		cout<<"Server: ";getline(cin,buf);
-		if ( buf.length() >0) {
-			const char *sendbuf = buf.c_str();
-			if ( send( s , sendbuf , strlen(sendbuf) , 0 )  == SOCKET_ERROR ) {
-				cout<<"send failed: "<<WSAGetLastError()<<endl;
-				closesocket(s);
-				WSACleanup();
-				return 1;
+		buf="Server: "+buf;
+		const char *sendbuf = buf.c_str();
+		for(int i=0;i<master.fd_count;i++){
+			int result=send(master.fd_array[i],sendbuf,strlen(sendbuf),0);
+			if ( result == SOCKET_ERROR ) {
+				cout<<'\r';
+				cout<<"send to client "<<i<<" failed: "<<WSAGetLastError()<<endl;
+				cout<<"Server: ";
 			}
 		}
-	} while ( buf.length() >0 );
+	} while ( true );
 	return 0;
 }
+//-------------------------------------------------------------
+
+
+
+
+
+
+
+
+
 
 int main() 
 {
@@ -111,6 +217,7 @@ int main()
     }
 	else cout<<"getaddrinfo OK"<<endl;
 	
+		
 	result = bind( listenSOCK , res->ai_addr , (int)res->ai_addrlen);
 	if ( result ==SOCKET_ERROR ) {
 		cout<<"bind error: "<<WSAGetLastError()<<endl;
@@ -129,88 +236,27 @@ int main()
 		return 1;
 	}
 	else cout<<"listen OK"<<endl;
-	
-//	fd_set master;
-//	FD_ZERO(&master);
-//	FD_SET( listenSOCK , &master );
-//	while (true) {
-//		fd_set copy = master ;
-//		int socketCount = select( 0 , &copy , NULL , NULL , NULL );
-//		for (int i=0;i<socketCount;i++) {
-//			SOCKET sock = copy.fd_array[i];
-//			if (sock == listenSOCK ) {
-//				// Accept connection
-//				SOCKET client = accept(listenSOCK , NULL, NULL );
-//				// Add new connection connected
-//				FD_SET(client , &master);
-//				// Send a welcome message
-//				char welmes[]="Welcome to chat server!!!";
-//				send(client,welmes,strlen(welmes),0);
-//			}
-//			else {
-//				char recvbuf[4096];
-//				ZeroMemory(recvbuf,4096);
-//				result = recv( sock , recvbuf , 4096 , 0 );
-//				if (result <= 0 ) {
-//					cout<<"recv error: "<<WSAGetLastError()<<endl;
-//					closesocket(sock);
-//					FD_CLR(sock , &master);
-//				}
-//				else {
-//					// Send message to other clients
-//					for (int i=0;i<master.fd_count;i++) {
-//						SOCKET outSock = master.fd_array[i];
-//						if (outSock != listenSOCK && outSock != sock ) {
-//							send(outSock,recvbuf,result,0);
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
+	cout<<"Listening on port 123"<<endl;
+//-------------------------------------------------------------------------	
 
-    // Accept a client socket
-    SOCKET ClientSocket1 = accept(listenSOCK, NULL, NULL);
-    if (ClientSocket1 == INVALID_SOCKET) {
-        cout<<"accept error: "<<WSAGetLastError()<<endl;
-        closesocket(listenSOCK);
-        WSACleanup();
-        return 1;
-    }
-	else cout<<"Accepted client 1"<<endl;
+
+ 
+
 	
-//	SOCKET ClientSocket2 = accept(listenSOCK , NULL ,NULL);
-//	cout<<"Accepted client 2"<<endl;
-	
-	
-    // No longer need listen socket
-    closesocket(listenSOCK);
-    
-//    char buf1[4096];
-//    char buf2[4096];
-//    while (true) {
-//    	recv( ClientSocket1 , buf1,4096,0);
-//    	cout<<buf1<<endl;
-//    	recv(ClientSocket2,buf2,4096,0);
-//    	
-//    	cout<<buf2<<endl;
-//    }
-    
-//
-//    } while (iResult > 0);
+
 
 	cout<<endl<<endl;
 	
-	// recv thread
-	thread recvt(rv,ClientSocket1);
-	recvt.detach();
-	// send thread
-	thread  sendt (sd,ClientSocket1);
+	// accept thread
+	thread act(ac,listenSOCK);
+	act.detach();
+	
+	// send anouce thread
+	thread  sendt (sd);
 	sendt.join();
 	
     // cleanup
-    closesocket(ClientSocket1);
-//    closesocket(ClientSocket2);
+    
     WSACleanup();
 
     return 0;
