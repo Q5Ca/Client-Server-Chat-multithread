@@ -8,4 +8,8 @@ I used Dev-C++5.11 and if you use Dev-C++ too,you need to link libws2_32.a (WinS
 or just open Server.dev and Client.dev with Dev-C++
 You can test it by running Server.exe then Client.exe
 
+## Screenshot
+### v2.0
+![lol](https://raw.githubusercontent.com/du0n9/Client-Server-Chat-multithread-/master/Test_v2.0.JPG)
+### v1.0
 ![lol](https://github.com/du0n9/Client-Server-Chat-multithread-/blob/master/Test_v1.0.JPG)
