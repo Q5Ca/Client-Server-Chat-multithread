@@ -1,10 +1,13 @@
-# Client-Server-Chat-multithread
-Server and Client C++
-Author: Du0n9
-I used Dev-C++5.11 and if you use Dev-C++ too,you need to link libws2_32.a (WinSock2) and libadvapi32.a (Instruction:https://www.tinkerforge.com/en/doc/Software/API_Bindings_C.html)
+# Windows Server-Client chat using C++ 
+A chatting application in console that make you like a hacker 
 
 ## Compiling
-
+- If you use Dev-C++, you need to link libws2_32.a (WinSock2) and libadvapi32.a (![Instruction](https://www.tinkerforge.com/en/doc/Software/API_Bindings_C.html))
+- If you use VS or BuildTools
+```
+    cl /EHsc server.cpp
+    cl /EHsc clents.cpp
+```
 
 ## Task list
 - [x] Multi-clients support.
